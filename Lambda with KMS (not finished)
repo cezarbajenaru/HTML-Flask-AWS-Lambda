@@ -7,7 +7,7 @@ from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
 from time import time
 
-# Initialize boto3 clients
+# Initialize the boto3 clients
 kms_client = boto3.client('kms')
 logs_client = boto3.client('logs')
 
@@ -40,7 +40,7 @@ def fix_padding(encoded_string):
         logger.critical("Failed to decrypt Slack Webhook URL: %s", e)
         raise
 
-def create_log_stream():
+def create_log_stream(): # LOG_GROUP_NAME  si  LOG_STREAM_NAME  sunt env variables din AWS si primesc payload din aws prin Lambda
     """Create a log stream in the specified log group."""
     try:
         logs_client.create_log_stream(
