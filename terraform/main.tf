@@ -16,11 +16,7 @@ resource "aws_instance" "ec2terraformjenkins" {
         echo "Docker has started"
         docker --version
         sudo systemctl enable docker
-        sudo usermod -aG docker $ec2-user
-        sudo docker pull jenkins/jenkins:lts
-        echo "Pulled Jenkins into container"
-        sudo docker run -d -p 8080:8080 jenkins/jenkins:lts
-        echo "Jenkins is now installed and can be accesed"
+        sudo usermod -aG docker ec2-user
     EOF
 
     tags = {
