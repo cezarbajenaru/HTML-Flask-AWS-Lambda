@@ -1,53 +1,38 @@
+#A map of the variables in modules 
+
+#Module name	  |                       Variables it expects	                                 | Outputs it provides
+#security_group	  |                     sg_name, sg_description, vpc_id                          |  security_group_id
+#ec2_instance	  |  ami, instance_type, key_name, security_group_id, user_data, instance_name	 | instance_public_ip
+
+#root main.tf passes variables to modules. In order for variables to be passed to modules, variables.tf must exist and everything to be passed must be there declared
+#Env variables with TF_VAR_ prefix can also be used to provide values and keep security good
 provider "aws" {
-    region = "us-east-whatever"    #get region from AWS console in cont
+    region = "eu-north-1"    #get region from AWS console in cont
 }
 
-resource "aws_instance" "ec2terraformjenkins" {
-    ami             = "ami-0453ec754f44f9a4a" #get AMI din AWS console
-    instance_type   = "t2.micro"
-    key_name        = "ec2terraform_key" #creeaza daca nu exista ( sigur nu mai exista)
-    security_groups = [aws_security_group.my_sg.name] #verifica daca mai exista security group-ul asta sau creeaza unul
+module "security_group" {
+  source         = "./modules/security_group"    #this goes in variables | entry point to security group
+  sg_name        = "my_sec_group"                #this goes in variables
+  sg_description = "Allow SSH and HTTP"          #this goes in variables
+  vpc_id         =  var.vpc_id             #stored in env variables / this goes in variables in linux with export command ( TF_VAR_name_variable / vpc_id in this case)
+}
 #commands are for Amazon Linux 2
-    user_data = <<-EOF
-        #!/bin/bash
-        sudo yum update -y
-        sudo yum install -y docker
-        sudo systemctl start docker
-        echo "Docker has started"
-        docker --version
-        sudo systemctl enable docker
-        sudo usermod -aG docker ec2-user
-    EOF
 
-    tags = {
-        Name = "Ec2terraformjenkins-Server"
-    }
+module "ec2_instance" {
+  source              = "./modules/ec2_instance" # should not be declared in variables. It is a special argument used only in the root main.tf
+  ami                 = "ami-0453ec754f44f9a4a"
+  instance_type       = "t2.micro"
+  key_name            = "ec2terraform_key"
+  security_group_id   = module.security_group.security_group_id #this goes in variables #Gives the EC2 instance the security group ID that was created in the security_group module in AWS.
+  instance_name       = "EC2TFDocker-Server"
+  user_data = <<-EOF
+    #!/bin/bash
+    sudo yum update -y
+    sudo yum install -y docker
+    sudo systemctl start docker
+    echo "Docker has started"
+    docker --version
+    sudo systemctl enable docker
+    sudo usermod -aG docker ec2-user
+  EOF
 }
-
-resource "aws_security_group" "my_sg" {
-    name = "my_sg"
-    description = "Allow SSH and HTTP"
-    vpc_id = "vpc-0237bd2a8d3ee0738"  #verifica VPC ID!
-
-    ingress {
-        from_port = 22
-        to_port = 22
-        protocol = "tcp"
-        cidr_blocks = ["0.0.0.0/0"]
-    }
-
-    ingress {
-        from_port = 8080
-        to_port = 8080
-        protocol ="tcp"
-        cidr_blocks = ["0.0.0.0/0"]
-    }
-
-    egress {
-        from_port = 0
-        to_port = 0
-        protocol = "-1"
-        cidr_blocks = ["0.0.0.0/0"]
-    }
-}
-# alegem IP static pentru a putea lucra si in viitor pe aceeasi adresa
